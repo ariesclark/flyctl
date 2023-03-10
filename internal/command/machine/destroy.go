@@ -34,6 +34,7 @@ func newDestroy() *cobra.Command {
 		cmd,
 		flag.App(),
 		flag.AppConfig(),
+		selectFlag,
 		flag.Bool{
 			Name:        "force",
 			Shorthand:   "f",
@@ -41,18 +42,17 @@ func newDestroy() *cobra.Command {
 		},
 	)
 
-	cmd.Args = cobra.ExactArgs(1)
+	cmd.Args = cobra.RangeArgs(0, 1)
 
 	return cmd
 }
 
 func runMachineDestroy(ctx context.Context) (err error) {
-	var (
-		out       = iostreams.FromContext(ctx).Out
-		machineID = flag.FirstArg(ctx)
-	)
+	out := iostreams.FromContext(ctx).Out
 
-	current, ctx, err := selectOneMachine(ctx, machineID)
+	machineID := flag.FirstArg(ctx)
+	haveMachineID := len(flag.Args(ctx)) > 0
+	current, ctx, err := selectOneMachine(ctx, machineID, haveMachineID)
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func runMachineDestroy(ctx context.Context) (err error) {
 	}
 
 	if current.State != "stopped" {
-		switch current.State {
+	switch current.State {
 		case "destroyed":
 			return fmt.Errorf("machine %s has already been destroyed", current.ID)
 		case "started":
